@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — CGPA Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="titleblock">
+      <div class="eyebrow" id="eyebrow">4.00 Scale</div>
+      <h1>CGPA Ledger</h1>
+      <p>Pick your university's grading scale, enter your standing CGPA, then this semester's courses. Retakes are settled against the grade they replace.</p>
+    </div>
+    <div class="seal" id="seal">
+      <div class="inner">
+        <div class="val" id="sealVal">0.00</div>
+        <div class="lbl">New CGPA</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="card scale-card">
+    <div>
+      <div class="scale-label">Grading scale</div>
+      <div class="scale-name" id="scaleName">—</div>
+      <div class="scale-changed-note" id="scaleChangedNote">Grades that don't exist on this scale were reset — please re-check them below.</div>
+    </div>
+    <select id="scaleSelect"></select>
+  </div>
+
+  <div class="card">
+    <h2>Prior record</h2>
+    <p class="sub">Your standing before this semester — from your latest transcript or advising sheet.</p>
+    <div class="field-row">
+      <div class="field">
+        <label>Previous CGPA</label>
+        <input type="text" inputmode="decimal" id="prevCGPA" placeholder="e.g. 3.42">
+        <div class="err" id="prevCGPAErr">Must be a number between 0 and 4.</div>
+      </div>
+      <div class="field">
+        <label>Credits completed so far</label>
+        <input type="text" inputmode="decimal" id="prevCredits" placeholder="e.g. 90">
+        <div class="err" id="prevCreditsErr">Must be a number 0 or greater.</div>
+      </div>
+    </div>
+    <div class="prev-qp-note" id="prevQPNote"></div>
+  </div>
+
+  <div class="card">
+    <h2>This semester</h2>
+    <p class="sub">Add every course you're taking now. Tick <b>retake</b> for a repeated course and give its previous grade — only the better attempt will count toward your cumulative total.</p>
+    <table>
+      <thead><tr>
+        <th class="col-title">Course</th>
+        <th class="col-credits">Credits</th>
+        <th class="col-grade">New grade</th>
+        <th class="col-retake">Retake?</th>
+        <th class="col-prevgrade">Previous grade</th>
+        <th class="col-del"></th>
+      </tr></thead>
+      <tbody id="courseRows"></tbody>
+    </table>
+    <button class="add-row-btn" id="addRowBtn">+ Add course</button>
+  </div>
+
+  <div class="summary">
+    <div class="cell"><div class="n" id="statSemGPA">0.00</div><div class="t">This Semester GPA</div></div>
+    <div class="cell"><div class="n" id="statNewCredits">0</div><div class="t">Total Credits (Cumulative)</div></div>
+    <div class="cell"><div class="n" id="statRetakes">0</div><div class="t">Retakes Applied</div></div>
+    <div class="cell"><div class="n" id="statDelta">0.00</div><div class="t">CGPA Change</div></div>
+  </div>
+
+  <div class="card">
+    <details class="calc-detail" id="calcDetail">
+      <summary>Show the calculation</summary>
+      <div id="calcLines"></div>
+    </details>
+  </div>
+
+  <div class="footnote">
+    <div class="legend">
+      <span><span class="swatch maroon"></span>Row highlighted = marked as a retake</span>
+    </div>
+    <div class="actions" style="display:flex; gap:10px; align-items:center;">
+      <span class="save-tick" id="saveTick">saved ✓</span>
+      <button class="ghost-btn" id="resetBtn">Clear all data</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
