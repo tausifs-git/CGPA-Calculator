@@ -46,6 +46,9 @@
   };
 
   const STORAGE_KEY = "cgpa_ledger_v4";
+
+  // Which color theme each university's grading scale switches to
+  const SCALE_THEME = { uiu:"uiu", nsu:"nsu", brac:"brac", aiub:"aiub", generic:"dark" };
   let state = loadState();
   let justSwitchedScale = false;
 
@@ -355,26 +358,44 @@
     });
     justSwitchedScale = anyReset;
     saveState();
+    applyTheme(SCALE_THEME[newKey] || "dark");
     render();
   });
 
-  // ===== Theme toggle (light / dark) =====
+  // ===== Color themes =====
   const THEME_KEY = "cgpa_ledger_theme";
-  const themeBtn = document.getElementById("themeToggle");
-  function currentTheme(){
-    return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  const THEMES = {
+    dark:  "Dark",
+    light: "Light",
+    uiu:   "UIU · Orange",
+    nsu:   "NSU · Azure",
+    brac:  "BRACU · Blue",
+    aiub:  "AIUB · Navy"
+  };
+  const themeLabel = document.getElementById("themeLabel");
+  const themeSwatches = document.querySelectorAll(".theme-swatch");
+
+  function syncThemeUI(){
+    const key = document.documentElement.getAttribute("data-theme");
+    themeLabel.textContent = "Theme: " + (THEMES[key] || THEMES.dark);
+    themeSwatches.forEach(btn=>{
+      const on = btn.dataset.themeKey === key;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
   }
-  function syncThemeButton(){
-    themeBtn.textContent = currentTheme() === "dark" ? "☀ Light" : "☾ Dark";
+
+  function applyTheme(key){
+    if(!THEMES[key]) key = "dark";
+    document.documentElement.setAttribute("data-theme", key);
+    try{ localStorage.setItem(THEME_KEY, key); }catch(e){}
+    syncThemeUI();
   }
-  themeBtn.addEventListener("click", ()=>{
-    const next = currentTheme() === "dark" ? "light" : "dark";
-    if(next === "dark") document.documentElement.setAttribute("data-theme", "dark");
-    else document.documentElement.removeAttribute("data-theme");
-    try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
-    syncThemeButton();
+
+  themeSwatches.forEach(btn=>{
+    btn.addEventListener("click", ()=> applyTheme(btn.dataset.themeKey));
   });
-  syncThemeButton();
+  syncThemeUI();
 
   populateScaleSelect();
   render();
