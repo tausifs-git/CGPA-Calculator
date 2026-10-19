@@ -271,12 +271,29 @@
 
   // ---- Full render: header/scale label + rows + stats. Used on load,
   // scale switch, add row, and reset — not on every keystroke. ----
+  // Grading scale reference: one small table per university, current one highlighted.
+  // Built from SCALES, so the values always match what the calculator uses.
+  function renderGradeTables(){
+    document.getElementById("gradeTables").innerHTML = Object.keys(SCALES).map(key=>{
+      const sc = SCALES[key];
+      const rows = sc.grades.map(x=>
+        `<div class="grade-row"><span class="gp">${x.p.toFixed(2)}</span><span class="gl">${x.g}</span></div>`
+      ).join("");
+      const active = key === state.scaleKey;
+      return `<div class="grade-table${active ? " active" : ""}">
+        <div class="grade-table-head" title="${escapeAttr(sc.name)}"><span>${escapeHTML(sc.short)}</span>${active ? '<span class="sel-pill">selected</span>' : ""}</div>
+        ${rows}
+      </div>`;
+    }).join("");
+  }
+
   function render(){
     document.getElementById("scaleName").textContent = SCALES[state.scaleKey].name;
     document.getElementById("eyebrow").textContent = SCALES[state.scaleKey].short + " · 4.00 Scale";
     document.getElementById("scaleChangedNote").classList.toggle("show", justSwitchedScale);
     document.getElementById("prevCGPA").value = state.prevCGPA;
     document.getElementById("prevCredits").value = state.prevCredits;
+    renderGradeTables();
     renderRows();
     refreshStats();
   }
