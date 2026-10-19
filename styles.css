@@ -727,3 +727,49 @@
     .scale-card{flex-direction:column; align-items:flex-start;}
     select#scaleSelect{width:100%; min-width:0;}
   }
+
+  /* ===== Download section ===== */
+  .download-actions{display:flex; gap:10px; flex-wrap:wrap;}
+  .dl-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    font-weight:600;
+    background:var(--accent-soft);
+    border:1px solid var(--border);
+    color:var(--text-accent);
+    padding:9px 16px;
+    border-radius:6px;
+    cursor:pointer;
+    transition:background .2s ease, color .2s ease;
+  }
+  .dl-btn:hover{background:var(--accent); color:var(--text-on-accent);}
+  .dl-msg{
+    margin-top:10px;
+    min-height:16px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  .dl-msg.err{color:var(--danger);}
+
+  /* ===== Printable report (shown only when printing / saving as PDF) ===== */
+  .print-report{display:none;}
+  @page{margin:16mm;}
+  @media print{
+    body{background:#fff !important; padding:0; color:#000;}
+    .wrap{max-width:none;}
+    .wrap > *:not(#printReport){display:none !important;}
+    .print-report{display:block; font-family:'Times New Roman', Times, serif; color:#000; font-size:12pt;}
+    .print-report h1{font-family:'Times New Roman', Times, serif; font-size:22pt; margin:0 0 2pt; color:#000;}
+    .print-report h2{font-family:'Times New Roman', Times, serif; font-size:13pt; margin:16pt 0 6pt; color:#000; border-bottom:1px solid #000; padding-bottom:2pt;}
+    .print-report .pr-meta{margin:0; color:#333; font-size:10.5pt;}
+    .print-report table{width:100%; border-collapse:collapse; margin:0;}
+    .print-report th, .print-report td{border:1px solid #000; padding:4pt 6pt; text-align:left; font-size:11pt; color:#000; background:none;}
+    .print-report th{font-weight:bold; background:#eee;}
+    .print-report td.num, .print-report th.num{text-align:center;}
+    .print-report .pr-kv th{width:55%; background:none; font-weight:normal;}
+    .print-report .pr-kv td{font-weight:bold;}
+    .print-report .pr-note{margin-top:10pt; font-weight:bold;}
+    .print-report .calc-line{display:flex; justify-content:space-between; padding:3pt 0; border-bottom:1px solid #ccc; color:#000; font-family:'Times New Roman', Times, serif; font-size:11pt;}
+    .print-report .calc-line.total{border-top:2px solid #000; border-bottom:none; font-weight:bold; color:#000;}
+  }

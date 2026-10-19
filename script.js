@@ -379,6 +379,219 @@
     render();
   });
 
+  // ===== Download / save / load =====
+  const dlMsg = document.getElementById("dlMsg");
+  function setDlMsg(text, isErr){
+    dlMsg.textContent = text;
+    dlMsg.classList.toggle("err", !!isErr);
+  }
+
+  function todayStr(){
+    const d = new Date(), p = n => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+  }
+
+  function downloadFile(filename, text, mime){
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+
+  // One place that gathers everything the exports need
+  function reportData(){
+    const r = compute();
+    const scale = SCALES[state.scaleKey];
+    const courses = state.courses.map(c=>{
+      const pts = gradePoint(c.grade);
+      return {
+        title: c.title || "",
+        credits: parseFloat(c.credits) || 0,
+        grade: c.grade,
+        points: pts === null ? "" : pts.toFixed(2),
+        retake: !!c.retake,
+        prevGrade: c.retake ? (c.prevGrade || "") : ""
+      };
+    });
+    return { r, scale, courses };
+  }
+
+  // ---- CSV ----
+  // User-typed text is wrapped as {t: "..."} so a leading = + - @ can't run as a spreadsheet formula
+  const T = s => ({ t: String(s) });
+  function csvCell(v){
+    let s, userText = false;
+    if(v && typeof v === "object"){ s = v.t; userText = true; }
+    else s = String(v);
+    if(userText && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function buildCSV(){
+    const { r, scale, courses } = reportData();
+    const delta = r.newCGPA - r.prevCGPA;
+    const rows = [
+      ["CGPA Ledger report"],
+      ["Grading scale", scale.name],
+      ["Date", todayStr()],
+      ["Previous CGPA", r.prevCGPA.toFixed(2)],
+      ["Previous credits completed", r.prevCredits],
+      [],
+      ["Course", "Credits", "Grade", "Grade points", "Retake", "Previous grade"],
+      ...courses.map(c => [T(c.title), c.credits, c.grade, c.points, c.retake ? "Yes" : "No", c.prevGrade]),
+      [],
+      ["This semester GPA", r.semGPA.toFixed(2)],
+      ["Credits added to cumulative", r.addedCredits],
+      ["Total credits (cumulative)", r.newCredits],
+      ["CGPA change", (delta >= 0 ? "+" : "") + delta.toFixed(2)],
+      ["New CGPA", r.newCGPA.toFixed(2)]
+    ];
+    return "\uFEFF" + rows.map(row => row.map(csvCell).join(",")).join("\r\n");
+  }
+
+  // ---- JSON save / load ----
+  function buildJSON(){
+    return JSON.stringify({
+      app: "cgpa-ledger",
+      version: 1,
+      savedAt: new Date().toISOString(),
+      state: {
+        scaleKey: state.scaleKey,
+        prevCGPA: state.prevCGPA,
+        prevCredits: state.prevCredits,
+        courses: state.courses.map(c => ({
+          title: c.title, credits: c.credits, grade: c.grade, retake: !!c.retake, prevGrade: c.prevGrade || ""
+        }))
+      }
+    }, null, 2);
+  }
+
+  // Never trust a loaded file: check every field before it touches the app state
+  function sanitizeLoaded(data){
+    const src = data && typeof data === "object" && data.state ? data.state : data;
+    if(!src || typeof src !== "object") throw new Error("This is not a CGPA Ledger file.");
+    if(!Object.prototype.hasOwnProperty.call(SCALES, src.scaleKey)) throw new Error("Unknown grading scale in file.");
+    if(!Array.isArray(src.courses)) throw new Error("No courses found in file.");
+    if(src.courses.length > 200) throw new Error("Too many courses in file.");
+
+    const grades = SCALES[src.scaleKey].grades;
+    const valid = g => grades.some(x => x.g === g);
+    const num = (v, min, max) => {
+      const n = parseFloat(v);
+      return isNaN(n) ? 0 : Math.min(max, Math.max(min, n));
+    };
+    const hasValue = v => v !== "" && v !== null && v !== undefined;
+
+    return {
+      scaleKey: src.scaleKey,
+      prevCGPA: hasValue(src.prevCGPA) ? num(src.prevCGPA, 0, 4).toFixed(2) : "",
+      prevCredits: hasValue(src.prevCredits) ? String(num(src.prevCredits, 0, 600)) : "",
+      courses: src.courses.map(c => {
+        c = c && typeof c === "object" ? c : {};
+        const retake = c.retake === true;
+        return {
+          id: uid(),
+          title: typeof c.title === "string" ? c.title.slice(0, 200) : "",
+          credits: String(num(c.credits, 0, 400)),
+          grade: valid(c.grade) ? c.grade : grades[0].g,
+          retake,
+          prevGrade: retake && valid(c.prevGrade) ? c.prevGrade : ""
+        };
+      })
+    };
+  }
+
+  // ---- Printable report (PDF via the browser's print dialog) ----
+  function buildPrintReport(){
+    const { r, scale, courses } = reportData();
+    const e = escapeHTML;
+    const delta = r.newCGPA - r.prevCGPA;
+    const rows = courses.map(c => `
+      <tr>
+        <td>${c.title ? e(c.title) : "&mdash;"}</td>
+        <td class="num">${c.credits}</td>
+        <td class="num">${e(c.grade)}</td>
+        <td class="num">${c.points}</td>
+        <td class="num">${c.retake ? "Yes" : "No"}</td>
+        <td class="num">${c.prevGrade ? e(c.prevGrade) : "&mdash;"}</td>
+      </tr>`).join("");
+    document.getElementById("printReport").innerHTML = `
+      <h1>CGPA Report</h1>
+      <p class="pr-meta">Grading scale: ${e(scale.name)} &middot; Date: ${todayStr()}</p>
+
+      <h2>Prior record</h2>
+      <table class="pr-kv">
+        <tr><th>Previous CGPA</th><td>${r.prevCGPA.toFixed(2)}</td></tr>
+        <tr><th>Credits completed so far</th><td>${r.prevCredits}</td></tr>
+      </table>
+
+      <h2>This semester</h2>
+      <table>
+        <thead><tr><th>Course</th><th class="num">Credits</th><th class="num">Grade</th><th class="num">Points</th><th class="num">Retake</th><th class="num">Previous grade</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <h2>Result</h2>
+      <table class="pr-kv">
+        <tr><th>This semester GPA</th><td>${r.semGPA.toFixed(2)}</td></tr>
+        <tr><th>Total credits (cumulative)</th><td>${r.newCredits}</td></tr>
+        <tr><th>CGPA change</th><td>${(delta >= 0 ? "+" : "") + delta.toFixed(2)}</td></tr>
+        <tr><th>New CGPA</th><td>${r.newCGPA.toFixed(2)}</td></tr>
+      </table>
+      ${r.newCGPA > 4 + 1e-9 ? '<p class="pr-note">Note: the calculated CGPA is above 4.00, which is not possible. Please check the input values.</p>' : ""}
+
+      <h2>Calculation</h2>
+      ${document.getElementById("calcLines").innerHTML}
+    `;
+  }
+  window.addEventListener("beforeprint", buildPrintReport);
+
+  document.getElementById("dlPdf").addEventListener("click", ()=>{
+    buildPrintReport();
+    window.print();
+    setDlMsg("In the print window, choose \"Save as PDF\" as the destination.");
+  });
+
+  document.getElementById("dlCsv").addEventListener("click", ()=>{
+    const name = "cgpa-ledger-" + todayStr() + ".csv";
+    downloadFile(name, buildCSV(), "text/csv;charset=utf-8");
+    setDlMsg("Downloaded " + name);
+  });
+
+  document.getElementById("dlJson").addEventListener("click", ()=>{
+    const name = "cgpa-ledger-" + todayStr() + ".json";
+    downloadFile(name, buildJSON(), "application/json");
+    setDlMsg("Downloaded " + name);
+  });
+
+  const loadInput = document.getElementById("loadJsonInput");
+  document.getElementById("loadJsonBtn").addEventListener("click", ()=> loadInput.click());
+  loadInput.addEventListener("change", ()=>{
+    const file = loadInput.files && loadInput.files[0];
+    loadInput.value = "";           // lets the same file be chosen again later
+    if(!file) return;
+    if(file.size > 500 * 1024){ setDlMsg("That file is too large to be a CGPA Ledger file.", true); return; }
+    const reader = new FileReader();
+    reader.onerror = ()=> setDlMsg("Could not read that file.", true);
+    reader.onload = ()=>{
+      try{
+        state = sanitizeLoaded(JSON.parse(reader.result));
+        justSwitchedScale = false;
+        saveState();
+        populateScaleSelect();
+        render();
+        setDlMsg("Loaded " + state.courses.length + " course" + (state.courses.length === 1 ? "" : "s") + " from " + file.name);
+      }catch(err){
+        setDlMsg(err instanceof SyntaxError ? "That file is not valid JSON." : err.message, true);
+      }
+    };
+    reader.readAsText(file);
+  });
+
   // ===== Color themes =====
   const THEME_KEY = "cgpa_ledger_theme";
   const THEMES = {
