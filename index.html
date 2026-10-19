@@ -6,6 +6,7 @@
 <title>Ledger — CGPA Calculator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>try{var t=localStorage.getItem("cgpa_ledger_theme");if(!t&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches)t="dark";if(t==="dark")document.documentElement.setAttribute("data-theme","dark");}catch(e){}</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,7 +14,10 @@
 
   <header>
     <div class="titleblock">
-      <div class="eyebrow" id="eyebrow">4.00 Scale</div>
+      <div class="eyebrow-row">
+        <div class="eyebrow" id="eyebrow">4.00 Scale</div>
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark theme">☾ Dark</button>
+      </div>
       <h1>CGPA Ledger</h1>
       <p>Pick your university's grading scale, enter your standing CGPA, then this semester's courses. Retakes are settled against the grade they replace.</p>
     </div>
@@ -74,6 +78,11 @@
     <div class="cell"><div class="n" id="statNewCredits">0</div><div class="t">Total Credits (Cumulative)</div></div>
     <div class="cell"><div class="n" id="statRetakes">0</div><div class="t">Retakes Applied</div></div>
     <div class="cell"><div class="n" id="statDelta">0.00</div><div class="t">CGPA Change</div></div>
+    <div class="cell featured"><div class="n" id="statNewCGPA">0.00</div><div class="t">New CGPA</div></div>
+  </div>
+
+  <div class="cgpa-warning" id="cgpaWarning" role="alert">
+    The calculated CGPA is above 4.00, which is not possible. Please check your input values.
   </div>
 
   <div class="card">

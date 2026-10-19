@@ -161,16 +161,20 @@
         ? `Prior quality points: <b>${r.prevQP.toFixed(2)}</b> (${r.prevCGPA.toFixed(2)} × ${r.prevCredits})`
         : `Leave both at 0 if this is your very first semester.`;
 
-    const pct = Math.max(0, Math.min(1, r.newCGPA/4)) * 100;
-    document.getElementById("seal").style.setProperty("--pct", pct.toFixed(1));
+    // Seal arc: 0 -> 360 degrees as CGPA goes 0.00 -> 4.00 (capped at a full circle)
+    const sealDeg = Math.max(0, Math.min(1, r.newCGPA / 4)) * 360;
+    document.getElementById("seal").style.setProperty("--seal-deg", sealDeg.toFixed(1));
     document.getElementById("sealVal").textContent = r.newCGPA.toFixed(2);
+    document.getElementById("statNewCGPA").textContent = r.newCGPA.toFixed(2);
+    document.getElementById("cgpaWarning").classList.toggle("show", r.newCGPA > 4 + 1e-9);
     document.getElementById("statSemGPA").textContent = r.semGPA.toFixed(2);
     document.getElementById("statNewCredits").textContent = r.newCredits;
     document.getElementById("statRetakes").textContent = r.retakesApplied + (r.retakesPending ? ` (+${r.retakesPending} pending)` : "");
     const delta = r.newCGPA - r.prevCGPA;
     const deltaEl = document.getElementById("statDelta");
     deltaEl.textContent = (delta>=0?"+":"") + delta.toFixed(2);
-    deltaEl.style.color = delta > 0 ? "#1e3a5f" : (delta < 0 ? "#7a2e2e" : "");
+    deltaEl.classList.toggle("up", delta > 0);
+    deltaEl.classList.toggle("down", delta < 0);
 
     document.getElementById("calcLines").innerHTML = `
       <div class="calc-line"><span>Prior quality points</span><span>${r.prevCGPA.toFixed(2)} × ${r.prevCredits} = ${r.prevQP.toFixed(2)}</span></div>
@@ -353,6 +357,24 @@
     saveState();
     render();
   });
+
+  // ===== Theme toggle (light / dark) =====
+  const THEME_KEY = "cgpa_ledger_theme";
+  const themeBtn = document.getElementById("themeToggle");
+  function currentTheme(){
+    return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  }
+  function syncThemeButton(){
+    themeBtn.textContent = currentTheme() === "dark" ? "☀ Light" : "☾ Dark";
+  }
+  themeBtn.addEventListener("click", ()=>{
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    if(next === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    else document.documentElement.removeAttribute("data-theme");
+    try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+    syncThemeButton();
+  });
+  syncThemeButton();
 
   populateScaleSelect();
   render();
